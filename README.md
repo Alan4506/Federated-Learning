@@ -103,19 +103,19 @@ As a client is initialized by a terminal running the COMP3221_FLClient.py with r
 # Run the Programs
 To run the program, go to the 500170629_500089387_COMP3221_FLCode directory, and open 6 terminals.
 
-The server must get started first. In the first terminal, run "python COMP3221_FLServer.py 6000 0" to disable clients subsampling or run "python COMP3221_FLServer.py 6000 1" to enable clients subsampling.
+- The server must get started first. In the first terminal, run "python COMP3221_FLServer.py 6000 0" to disable clients subsampling or run "python COMP3221_FLServer.py 6000 1" to enable clients subsampling.
 
 Then within 30 seconds, run 5 commands in the last 5 terminals.
 
-In the second terminal, run "python COMP3221_FLClient.py client1 6001 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client1 6001 1" to use Mini-Batch GD as the client's optimization method.
+- In the second terminal, run "python COMP3221_FLClient.py client1 6001 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client1 6001 1" to use Mini-Batch GD as the client's optimization method.
 
-In the third terminal, run "python COMP3221_FLClient.py client2 6002 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client2 6002 1" to use Mini-Batch GD as the client's optimization method.
+- In the third terminal, run "python COMP3221_FLClient.py client2 6002 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client2 6002 1" to use Mini-Batch GD as the client's optimization method.
 
-In the fourth terminal, run "python COMP3221_FLClient.py client3 6003 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client3 6003 1" to use Mini-Batch GD as the client's optimization method.
+- In the fourth terminal, run "python COMP3221_FLClient.py client3 6003 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client3 6003 1" to use Mini-Batch GD as the client's optimization method.
 
-In the fifth terminal, run "python COMP3221_FLClient.py client4 6004 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client4 6004 1" to use Mini-Batch GD as the client's optimization method.
+- In the fifth terminal, run "python COMP3221_FLClient.py client4 6004 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client4 6004 1" to use Mini-Batch GD as the client's optimization method.
 
-In the sixth terminal, run "python COMP3221_FLClient.py client5 6005 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client5 6005 1" to use Mini-Batch GD as the client's optimization method.
+- In the sixth terminal, run "python COMP3221_FLClient.py client5 6005 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client5 6005 1" to use Mini-Batch GD as the client's optimization method.
 
 It is also ok to start less than 5 clients in the first 30 seconds, and you can start them whenever you want before the server finishes 100 global communication rounds.
 
