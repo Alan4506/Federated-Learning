@@ -89,7 +89,6 @@ Sending new local model
 After that, the client uses the global model for continuing the training process to create a new local model. The local training process can be finished in E = 2 local iterations using GD or Mini-Batch GD. The client then sends the new local model to the server and waits for receiving the new global model from the server. The batch-size for Mini-Batch GD is set to 20.
 ##  Evaluation
 To evaluate the performance of the global model across all clients at each global communication round, we take the average of training loss and testing accuracy across all clients. This is done after all clients and the server finished the training process.
-
 # Implementation
 ## Server
 The server keeps a global model that is randomly generated initially. It will first start one thread (t1) for receiving packets from clients and another thread (t2) for running100 global communication rounds. The class User represents the client/user of theserver, storing clients’ port number, the iteration it is current at, the latest testingaccuracy and training loss, etc. After the server starts up, t2 sleeps for 30 seconds andt1 may receive some hand-shaking packets from clients. New clients will be addedtothe user list of the server, with their numbers of train samples, port numbers, and client ids recorded.
