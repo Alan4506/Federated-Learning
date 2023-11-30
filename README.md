@@ -38,3 +38,21 @@ python COMP3221_FLServer.py 6000 1
 - `Sub-client`: is a flag to enable clients subsampling. (0 means M = K then the server will aggregate all clients model, 1 means M = 2 then the server only aggregate randomly 2 clients over 5 clients).
 
 Following Alg. 2.1, initially, the server randomly generates the global model w_0 and listens for hand-shaking messages from new coming clients. Whenever the server receives the handshaking message from a new client, it will add this client to a list (client’s list) that contains all clients in the FL system. The hand-shaking message includes the client’s data size and id.
+
+After receiving the first hand-shaking message of one client, the server will wait for 30s to listen to new other coming clients for registration (this process only happens once when the server starts). The server then broadcasts the global model to all registered clients and then waits for all clients to send new local models for aggregation. You are free to define the exact format of the model packets and hand-shaking messages.
+
+After collecting all local models from all clients, the server aggregates all client’s models (or subset M = 2 clients depends on the setting) to form a new global model and broadcasts the new global model to all registered clients. This process is one global comunication round. In this assigment, FL system will run T = 100 global communication rounds. After 100 global communication rounds, server will broadcast a message to stop training process to all clients and then stops training process. For each global round, server will print out the following output to the terminal:
+
+```bash
+Global Iteration 10:
+Total Number of clients: 5
+Getting local model from client 1
+Getting local model from client 2
+Getting local model from client 5
+Getting local model from client 4
+Getting local model from client 3
+Aggregating new global model
+Broadcasting new global model
+```
+
+If there is a new client coming for registration after the server has finished the initialization, the server will add this client to the current client’s list and broadcast the global model in the next global communication round.
