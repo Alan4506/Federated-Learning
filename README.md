@@ -23,13 +23,13 @@ There are 2 main programs implemented: one for clients and one for the server. T
 
 The server program should be named as `COMP3221_FLServer.py` and accepts the following command-line arguments:
 
-```bash
+```
 python COMP3221_FLServer.py <Port-Server> <Sub-client>
 ```
 
 For example: 
 
-```bash
+```
 python COMP3221_FLServer.py 6000 1
 ```
 
@@ -59,13 +59,13 @@ If there is a new client coming for registration after the server has finished t
 ##  Client
 The client program should be named as `COMP3221_FLClient.py` and accepts the following command line arguments:
 
-```bash
+```
 python COMP3221_FLClient.py <Client-id> <Port-Client> <Opt-Method>
 ```
 
 For example: 
 
-```bash
+```
 python COMP3221_FLClient.py client1 6001 1
 ```
 
@@ -77,7 +77,7 @@ python COMP3221_FLClient.py client1 6001 1
 
 Upon initialization, each client loads its own data, sends the hand-shaking message to the server for registration, and waits for the server to broadcast the global mode. On receiving the global model packets, the client uses this model to evaluate the local test data. It also logs the training loss and accuracy of the global model at each communication round to a file named `client1_log.txt` (for evaluation purpose) and prints out to the terminal, for example:
 
-```bash
+```
 I am client 1
 Receving new global model
 Training loss: 0.01
