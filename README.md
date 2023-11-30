@@ -33,3 +33,7 @@ For example:
 python COMP3221_FLServer.py 6000 1
 ```
 
+
+- `Port-Server`: is the port number of the server used for listening model packets from clients and it is fixed to 6000.
+
+- `Sub-client`: is a flag to enable clients subsampling. (0 means `M = K` then the server will aggregate all clients model, 1 means `M = 2` then the server only aggregate randomly 2 clients over 5 clients).
