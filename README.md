@@ -124,6 +124,7 @@ Close the windows showing the figures and the whole program will end.
 
 # Results 
 - Data Statistics
-![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/329e782b-63be-4ceb-bd1a-cbca3e5add51)  ![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/2a98d7e3-0c05-4163-9ff4-7492d72bd6a1)
+
+![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/329e782b-63be-4ceb-bd1a-cbca3e5add51)       ![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/2a98d7e3-0c05-4163-9ff4-7492d72bd6a1)
 
 
