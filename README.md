@@ -122,7 +122,7 @@ It is also ok to start less than 5 clients in the first 30 seconds, and you can 
 After the server's 100 global communication rounds finish, you will see the figures showing the testing accuracies and the training loss of the global model over 100 rounds.
 Close the windows showing the figures and the whole program will end. 
 
-# Results
+# Results 
 - Data Statistics
 ![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/329e782b-63be-4ceb-bd1a-cbca3e5add51)  ![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/2a98d7e3-0c05-4163-9ff4-7492d72bd6a1)
 
