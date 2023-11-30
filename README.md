@@ -57,3 +57,35 @@ Broadcasting new global model
 
 If there is a new client coming for registration after the server has finished the initialization, the server will add this client to the current client’s list and broadcast the global model in the next global communication round.
 ##  Client
+The client program should be named as `COMP3221_FLClient.py` and accepts the following command line arguments:
+
+```bash
+python COMP3221_FLClient.py <Client-id> <Port-Client> <Opt-Method>
+```
+
+For example: 
+
+```bash
+python COMP3221_FLClient.py client1 6001 1
+```
+
+- `Client-id`:  is ID of a client in a federated learning network and is indexed as following client1, client2, client3, client4, and client5.
+
+- `Sub-client` is the port number of a client receving the model packets from the server. The port number is integer indexed from 6001 and increased by one for each client. For example the port number from client 1 to client 5 are from 6001 to 6005.
+
+- `Opt-Method`: is an optimization method to obtain local model (0 is for GD and 1 is for Mini-Batch GD).
+
+Upon initialization, each client loads its own data, sends the hand-shaking message to the server for registration, and waits for the server to broadcast the global mode. On receiving the global model packets, the client uses this model to evaluate the local test data. It also logs the training loss and accuracy of the global model at each communication round to a file named `client1_log.txt` (for evaluation purpose) and prints out to the terminal, for example:
+
+```bash
+I am client 1
+Receving new global model
+Training loss: 0.01
+Testing acurancy: 98%
+Local training...
+Sending new local model
+```
+
+After that, the client uses the global model for continuing the training process to create a new local model. The local training process can be finished in E = 2 local iterations using GD or Mini-Batch GD. The client then sends the new local model to the server and waits for receiving the new global model from the server. The batch-size for Mini-Batch GD is set to 20.
+##  Evaluation
+To evaluate the performance of the global model across all clients at each global communication round, we take the average of training loss and testing accuracy across all clients. This is done after all clients and the server finished the training process.
