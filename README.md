@@ -37,4 +37,4 @@ python COMP3221_FLServer.py 6000 1
 
 - `Sub-client`: is a flag to enable clients subsampling. (0 means M = K then the server will aggregate all clients model, 1 means M = 2 then the server only aggregate randomly 2 clients over 5 clients).
 
-Following Alg. 2.1, initially, the server randomly generates the global model $(w_0) and listens for hand-shaking messages from new coming clients. Whenever the server receives the handshaking message from a new client, it will add this client to a list (client’s list) that contains all clients in the FL system. The hand-shaking message includes the client’s data size and id.
+Following Alg. 2.1, initially, the server randomly generates the global model w_0 and listens for hand-shaking messages from new coming clients. Whenever the server receives the handshaking message from a new client, it will add this client to a list (client’s list) that contains all clients in the FL system. The hand-shaking message includes the client’s data size and id.
