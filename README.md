@@ -56,3 +56,4 @@ Broadcasting new global model
 ```
 
 If there is a new client coming for registration after the server has finished the initialization, the server will add this client to the current client’s list and broadcast the global model in the next global communication round.
+##  Client
