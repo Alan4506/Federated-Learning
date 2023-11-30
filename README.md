@@ -20,13 +20,16 @@ As MNIST is used for a classification problem, we can choose any classification 
 #  Program structure
 There are 2 main programs implemented: one for clients and one for the server. The server program has to be started before starting client programs.
 ##  Server
-The server program should be named as COMP3221_FLServer.py and accepts the following command-line arguments: python COMP3221_FLServer.py <Port-Server> <Sub-client>
-
-For example: python COMP3221_FLServer.py 6000 1
 
 The server program should be named as `COMP3221_FLServer.py` and accepts the following command-line arguments:
 
 ```bash
 python COMP3221_FLServer.py <Port-Server> <Sub-client>
+```
 
+For example: 
+
+```bash
+python COMP3221_FLServer.py 6000 1
+```
 
