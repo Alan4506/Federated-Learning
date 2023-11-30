@@ -127,4 +127,10 @@ Close the windows showing the figures and the whole program will end.
 
 ![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/329e782b-63be-4ceb-bd1a-cbca3e5add51)       ![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/2a98d7e3-0c05-4163-9ff4-7492d72bd6a1)
 
+- Training Loss Illustration
 
+![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/b3ba2b08-5518-40f7-84da-6a91a136923b)
+
+- Accuracy Illustration
+
+![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/ce48c3ac-78ea-417a-bd8b-a9654108638a)
