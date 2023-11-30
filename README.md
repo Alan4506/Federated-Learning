@@ -120,4 +120,4 @@ In the sixth terminal, run "python COMP3221_FLClient.py client5 6005 0" to use G
 It is also ok to start less than 5 clients in the first 30 seconds, and you can start them whenever you want before the server finishes 100 global communication rounds.
 
 After the server's 100 global communication rounds finish, you will see the figures showing the testing accuracies and the training loss of the global model over 100 rounds.
-Close the windows showing the figures and the whole program will end.
+Close the windows showing the figures and the whole program will end. 
