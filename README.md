@@ -43,7 +43,7 @@ After receiving the first hand-shaking message of one client, the server will wa
 
 After collecting all local models from all clients, the server aggregates all client’s models (or subset M = 2 clients depends on the setting) to form a new global model and broadcasts the new global model to all registered clients. This process is one global comunication round. In this assigment, FL system will run T = 100 global communication rounds. After 100 global communication rounds, server will broadcast a message to stop training process to all clients and then stops training process. For each global round, server will print out the following output to the terminal:
 
-```bash
+```
 Global Iteration 10:
 Total Number of clients: 5
 Getting local model from client 1
