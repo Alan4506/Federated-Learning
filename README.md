@@ -134,3 +134,11 @@ Close the windows showing the figures and the whole program will end.
 - Accuracy Illustration
 
 ![image](https://github.com/Alan4506/Federated-Learning/assets/62124408/ce48c3ac-78ea-417a-bd8b-a9654108638a)
+
+- GD vs. Mini-Batch GD
+
+Gradient Descent (GD) updates parameters after processing the entire dataset, which provides a smooth convergence as indicated by the loss curves, but might not be efficient with large datasets. Conversely, Mini-Batch GD, while showing a more volatile loss curve due to more frequent updates, leads to a faster convergence. This volatility is a trade-off for the computational efficiency and can help escape local minima, potentially leading to better generalization, as suggested by the lower training loss. The smoother accuracy curve for Mini-Batch GD indicates a steadier improvement in model performance over iterations compared to GD.
+
+- Subsampling vs. Non-Subsampling Clients
+
+The results show a slight difference in test accuracy when subsampling clients, which might suggest that each subset of clients provides a sufficiently diverse representation of the overall data distribution, allowing the global model to generalize well. The smoother curves in the non-subsampling approach indicate more stable updates, as they leverage the full breadth of client data. In contrast, the slightly more erratic curves with subsampling could be due to the variability in the data subsets used for each update. However, the similar final accuracy and loss indicate that, for this dataset and model, the federated learning algorithm is robust to the number of participating clients in each round.
