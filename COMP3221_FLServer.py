@@ -1,173 +1,329 @@
 # Import necessary packages
 import torch
 import torch.nn as nn
-import os
+import torch.nn.functional as F
 import json
-from torch.utils.data import DataLoader
+import sys
+import random
+import time
+import matplotlib.pyplot as plt
 import threading
 import socket
-import sys
-from COMP3221_FLServer import MCLR
 
 
-class Client:
+class MCLR(nn.Module):
     """
-    Represents a client in a federated learning system, handling local data and model training.
+    The model used for the MNIST task: a simple multiclass logistic regression
+    """
+
+    def __init__(self):
+        """
+        Initializes the MCLR model with a single fully connected layer.
+        """
+        super(MCLR, self).__init__()
+        self.fc1 = nn.Linear(784, 10)
+        self.fc1.weight.data=torch.randn(self.fc1.weight.size())*.01
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Defines the forward pass of the MCLR model.
+        
+        Args:
+            x (torch.Tensor): The input tensor containing the data.
+            
+        Returns:
+            torch.Tensor: The output tensor after applying the log softmax function.
+        """
+        x = torch.flatten(x, 1)
+        x = self.fc1(x)
+        output = F.log_softmax(x, dim=1)
+        return output
+    
+
+class User:
+    """
+    Represents a user/client of the server with various attributes.
 
     Attributes:
-        client_id (str): A unique identifier for the client.
-        id (int): Extracted numeric ID from the client_id.
-        server_port (int): The port number of the server for communication.
-        port (int): The local port for client communication.
-        host (str): Hostname or IP address of the server.
-        learning_rate (float): Learning rate for the SGD optimizer.
-        X_train, y_train, X_test, y_test (array-like): Training and testing datasets.
-        train_samples, test_samples (int): Number of samples in the training and testing datasets.
-        trainloader, testloader (DataLoader): DataLoaders for batching training and testing data.
-        model (MCLR): The local model for training.
-        loss (Loss): The loss function.
-        optimizer (Optimizer): The optimizer for training the model.
+        id (str): Unique identifier of the user.
+        port_no (int): Communication port number.
+        train_samples (int): Number of training samples.
+        current_iteration (int): Current iteration in the training process.
+        model (MCLR): Machine learning model associated with the user.
+        accuracy (float): Accuracy of the user's model, initialized to 0.
+        loss (float): Current loss of the user's model, initialized to 0.
+    """
+    
+    def __init__(self, train_samples: int, port_no: int, id: str):
+        """
+        Initializes a new instance of User.
+
+        Args:
+            train_samples (int): The number of training samples the user has.
+            port_no (int): The port number used by the client for communication.
+            id (str): The unique identifier of the user.
+        """
+        self.id = id
+        self.port_no = port_no
+        self.train_samples = train_samples
+        self.current_iteration = 0
+        self.model = MCLR()
+        self.accuracy = 0
+        self.loss = 0
+
+
+class Server:
+    """
+    Represents the server in a federated learning setup, managing the global model and communication with clients.
+
+    Attributes:
+        init_time (float): Timestamp of when the server was initialized.
+        port_no (int): Port number used for server-client communication.
+        sub_client (int): A number that determines if the clients subsampling is enabled (1) or not (0).
+        host_no (str): Host address.
+        users (list of User): List of User objects representing clients connected to the server.
+        global_model (MCLR): The global model being trained.
+        current_iteration (int): The current iteration of training.
+        loss (list of float): List of loss values from each training round.
+        accuracy (list of float): List of accuracy values from each training round.
+        random_users (list of User): Random subset of users selected for aggregation.
+        new_users (list of User): New users that connect to the server.
+        iteration_time (float): Timestamp of the start of the current iteration.
     """
 
-    def __init__(self, client_id: str, learning_rate: float, port: int, opt: str):
+    def __init__(self, port_no: int, sub_client: int):
         """
-        Initializes a new Client instance with the given parameters, datasets, and machine learning model.
+        Initializes the Server with the given port number and sub_client count.
+        
+        Args:
+            port_no (int): The port number on which the server will listen.
+            sub_client (int): A flag that determines whether the clients subsampling is enabled or not.
+        """
+        self.init_time = time.time()
+        self.port_no = port_no
+        self.sub_client = sub_client
+        self.host_no = "127.0.0.1"
+        self.users = []
+        self.global_model = MCLR()
+        self.current_iteration = 1
+        self.loss = []
+        self.accuracy = []
+        self.random_users = []
+        self.new_users = []
+        self.iteration_time  = 0
+
+    def check_user_existence(self, client_id: str) -> bool:
+        """
+        Checks if a user with the specified client ID already exists in the server's user list.
 
         Args:
-            client_id (str): The unique identifier for the client.
-            learning_rate (float): The learning rate to be used for the SGD optimizer.
-            port (int): The local port for client communication.
-            opt (str): Option to determine the optimization method; '0' for GD, '1' for mini-batch size GD.
-        """
-        self.client_id = client_id
-        self.id = int(client_id[-1])
-        self.server_port = 6000
-        self.port = port
-        self.host = "127.0.0.1"
-        self.learning_rate = learning_rate
-        
-        self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = self.get_data()
-        self.train_data = [(x, y) for x, y in zip(self.X_train, self.y_train)]
-        self.test_data = [(x, y) for x, y in zip(self.X_test, self.y_test)]
-        
-        if opt == "0":
-            self.trainloader = DataLoader(self.train_data, self.train_samples)
-        elif opt == "1":
-            self.trainloader = DataLoader(self.train_data, 20)
+            client_id (str): The client ID to check for existence.
 
-        self.testloader = DataLoader(self.test_data, self.test_samples)
-        
-        self.model = MCLR()
-        self.loss = nn.NLLLoss()
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
-        
-        log_path = os.path.join(".", self.client_id + "_log.txt")
-        if os.path.exists(log_path):
-            os.remove(log_path)
-    
-    
-    def hand_shake(self):
+        Returns:
+            bool: True if a user with the given client ID exists, False otherwise.
         """
-        Initiates a handshake with the server to establish a connection and sends client details.
+        for user in self.users:
+            if user.id == client_id:
+                return True
+        return False
 
-        This method sends a hand-shaking packet containing the client's ID, port number,
-        and number of training samples to the server.
+    def iterate(self):
         """
-        connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        connection.connect((self.host, self.server_port))
-        
-        hand_shake_mess = f"hand-shaking packet\n{self.client_id}\n{self.port}\n{self.train_samples}"
-        mess_data = bytes(hand_shake_mess, encoding='utf-8')
-        connection.sendall(mess_data)
-        connection.close()
-        
-    def model_receiving(self):
-        """
-        Sets up a socket connection to receive the global model from the server.
+        Runs the training process for 100 global communication rounds. Clients are stopped after 100 rounds.
 
-        This method establishes a socket connection and listens for incoming connections.
-        Upon accepting a connection, it starts a new thread for distributed computation.
-        If there's an error in the socket connection, it prints an error message.
+        This method handles the main training loop, broadcasting the global model, receiving updates from clients,
+        aggregating parameters, and updating the global model.
+        """
+        time.sleep(30)
+        while self.current_iteration <= 100:
+
+            self.iteration_time = time.time()
+
+            # Broadcast global model to all clients
+            print("Broadcasting new global model")
+            self.broadcast()
+        
+            print("Global Iteration " + str(self.current_iteration) + ":")
+            print("Total Number of clients: " + str(len(self.users)))
+
+            # after received all local packets
+            while True:
+                time.sleep(0.001)
+                self.drop_dead_clients()
+                if (self.check_all_received() == True):
+                    break
+            
+            # Evaluate the global model across all clients
+            avg_accuracy, avg_loss = self.evaluate()
+            self.accuracy.append(avg_accuracy)
+            
+            # Each client keeps training process to obtain new local model from the global model 
+            # Above process training all clients and all client paricipate to server, how can we just select subset of user for aggregation
+            self.loss.append(avg_loss)
+
+            print("Average accuracy of all clients: {:.4f}".format(avg_accuracy))
+            print("Average loss of all clients: {:.4f}".format(avg_loss))
+            
+            # Aggregate all clients model to obtain new global model 
+            self.aggregate_parameters()
+            print("Aggregating new global model\n")
+
+            self.current_iteration += 1
+
+            for user in self.new_users:
+                self.users.append(user)
+            self.new_users = []
+
+        self.stop_clients()
+
+    def aggregate_parameters(self) -> MCLR:
+        """
+        Aggregates parameters from the client models to update the global model.
+
+        If `sub_client` is 0, aggregates from all users, otherwise selects a random subset of users.
+        Updates the global model's parameters by averaging the client models weighted by their number of samples.
+
+        Returns:
+            MCLR: The updated global model after aggregation.
+        """
+        # Clear global model first
+        for param in self.global_model.parameters():
+            param.data = torch.zeros_like(param.data)
+
+        if (len(self.users) == 0):
+            return
+        
+        if (self.sub_client == 0):
+            total_samples = 0
+            for user in self.users:
+                total_samples += user.train_samples
+            for user in self.users:
+                for server_param, user_param in zip(self.global_model.parameters(), user.model.parameters()):
+                    server_param.data = server_param.data + user_param.data.clone() * user.train_samples / total_samples
+            return self.global_model
+
+        else:
+            if (len(self.users) == 1):
+                self.random_users = [self.users[0]]
+            else:
+                candidates = range(0, len(self.users))
+                values = random.sample(candidates, 2)
+                self.random_users = [self.users[values[0]], self.users[values[1]]]
+
+            total_samples = 0
+            for user in self.random_users:
+                total_samples += user.train_samples
+            for user in self.random_users:
+                for server_param, user_param in zip(self.global_model.parameters(), user.model.parameters()):
+                    server_param.data = server_param.data + user_param.data.clone() * user.train_samples / total_samples
+            return self.global_model
+
+    def evaluate(self) -> tuple:
+        """
+        Calculates and returns the average testing accuracy and average training loss of all users.
+
+        Returns:
+            tuple: A tuple containing the average accuracy and average loss across all users.
+        """
+        total_accurancy = 0
+        total_loss = 0
+        if (len(self.users) == 0):
+            return 0, 0
+        for user in self.users:
+            total_accurancy += user.accuracy
+            total_loss += user.loss
+        return total_accurancy / len(self.users), total_loss / len(self.users)
+
+    def receive(self):
+        """
+        Listens for and receives packets from clients, starting a new thread for handling each connection.
+
+        This method is responsible for handling the network communication, accepting incoming connections,
+        and delegating the packet handling to `data_receiving` method in separate threads.
         """
         try:
-            with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as receiver:
-                receiver.bind((self.host, self.port))
-                receiver.listen(5)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+                server.bind((self.host_no, self.port_no))
+                server.listen(10)
+
                 while True:
-                    conn, addr = receiver.accept()
-                    computation_thread = threading.Thread(target=self.distributed_computation, args=(conn,))
-                    computation_thread.setDaemon(True)
-                    computation_thread.start()
-        
-        except socket.error as msg:
-            print("Error during socket connection!")
-            print(msg)
-            
-            
-    def distributed_computation(self, conn: socket.socket):
+                    c, addr = server.accept()
+                    conn = threading.Thread(target=self.data_receiving, args=(c,))
+                    conn.start()
+
+                server.close()
+
+        except:
+            print("server error")
+
+    def data_receiving(self, client: socket.socket):
         """
-        Handles the distributed computation process after receiving the global model from the server.
+        Handles the packets received from a client socket.
+
+        This method processes incoming data, registers new users, and updates existing user data
+        with new training parameters received from the client.
 
         Args:
-            conn (socket.socket): The socket connection through which data is received.
+            client (socket.socket): The client socket from which data is received.
         """
         while True:
             received = ""
             while True:
-                data = conn.recv(1024 * 16)
+                data = client.recv(1024 * 16)
                 if not data:
                     break
                 received += str(data.decode('utf-8'))
-            # received = str(data.decode('utf-8'))
+
             if (received == ""):
                 break
-            received_ls = received.strip().split("\n")
-            if received_ls[0] == "broadcast packet":
-                param1 = json.loads(received_ls[1])
-                req1 = received_ls[2]
-                param2 = json.loads(received_ls[3])
-                req2 = received_ls[4]
-                self.set_parameters(param1, param2, req1, req2)
-                
-                accuracy = self.test()
-                loss = self.train(2)
-                
-                sending_thread = threading.Thread(target=self.send_local_model, args=(accuracy, loss))
-                sending_thread.start()
-                
-                self.log_accuracy_and_loss(accuracy, loss)
-            
-            elif received_ls[0] == "stop packet":
-                os._exit(0)
-        conn.close()
-                
-    def log_accuracy_and_loss(self, accuracy: float, loss: float):
-        """
-        Logs and prints the accuracy and loss of the client's model.
 
-        Args:
-            accuracy (float): The testing accuracy of the client's model.
-            loss (float): The training loss of the client's model.
-        """
-        with open(self.client_id + "_log.txt", "a") as log:
-            message = f"I am {self.client_id[:-1]} {self.client_id[-1]}\n"
-            message += f"Receiving new global model\nTraining loss: {loss:.4f}\n" 
-            message += f"Testing accuracy: {accuracy * 100:.4f}%\n"
-            message += "Local training...\nSending new local model\n\n"
-            
-            log.write(message)
-            print(message)
-            
-    def send_local_model(self, accuracy: float, loss: float):
-        """
-        Sends the local model parameters along with accuracy and loss to the server.
+            lines = received.split("\n")
+            if (lines[0] == "hand-shaking packet"):
+                if (self.check_user_existence(lines[1]) == False):
+                    user = User(int(lines[3]), int(lines[2]), lines[1])
+                    if (time.time() - self.init_time <= 30):
+                        self.users.append(user)
+                    else:
+                        self.new_users.append(user)
 
-        Args:
-            accuracy (float): The testing accuracy of the client's model.
-            loss (float): The training loss of the client's model.
+            else:
+                id = lines[1]
+                print("Getting local model from client " + id[-1])
+                acc = lines[2]
+                loss = lines[3]
+                param1_str = lines[4]
+                req1_str  = lines[5]
+                param2_str  = lines[6]
+                req2_str  = lines[7]
+                for user in self.users:
+                    if id == user.id:
+                        user.current_iteration = self.current_iteration
+                        param1, param2 = user.model.parameters()
+                        param1.data = torch.tensor(json.loads(param1_str))
+                        if (req1_str == "true"):
+                            param1.requires_grad = True
+                        else:
+                            param1.requires_grad = False
+                        param2.data = torch.tensor(json.loads(param2_str))
+                        if (req2_str == "true"):
+                            param2.requires_grad = True
+                        else:
+                            param2.requires_grad = False
+                        user.accuracy = float(acc)
+                        user.loss = float(loss)
+
+        client.close()
+
+    def broadcast(self):
         """
-        param1, param2 = self.model.parameters()
-        message = f"local model packet\n{self.client_id}\n{str(accuracy)}\n{str(loss)}\n"
+        Broadcasts the current global model's parameters to all connected clients.
+
+        This method serializes the global model's parameters and sends them over a socket connection
+        to each client. It handles the potential failure of clients to receive the model by catching
+        exceptions and printing an error message.
+        """
+        param1, param2 = self.global_model.parameters()
+        message = "broadcast packet\n"
         message += str(param1.data.tolist()) + "\n"
         if param1.requires_grad:
             message += "true" + "\n"
@@ -178,147 +334,113 @@ class Client:
             message += "true" + "\n"
         else:
             message += "false" + "\n"
-            
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((self.host, self.server_port)) 
-                mess = bytes(message, encoding= 'utf-8')
-                s.sendall(mess)
-                s.close()   
-                
-        except socket.error as msg:
-            print("Error during local model sending!")
-            print(msg)
-                
-                       
-    def get_data(self) -> tuple:
+
+        for user in self.users:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((self.host_no, user.port_no)) 
+                    message_encrypt = bytes(message, encoding= 'utf-8')
+                    s.sendall(message_encrypt)
+                    s.close()   
+            except:
+                print("Broadcast the global model to " + user.id + " failed. This client may have failed")
+                pass
+    
+    def stop_clients(self):
         """
-        Retrieves and parses the client's training and testing datasets from JSON files into Tensor objects.
+        Sends a message to all clients to stop their training process.
+
+        This method iterates through all users and sends a 'stop packet' message
+        to signal the end of the training. It handles exceptions in case the client has failed or disconnected.
+        """
+        for user in self.users:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((self.host_no, user.port_no)) 
+                    message = "stop packet"
+                    message_encrypt = bytes(message, encoding= 'utf-8')
+                    s.sendall(message_encrypt)
+                    s.close()   
+            except:
+                print("stop clients error")
+                pass
+
+    def drop_dead_clients(self):
+        """
+        Removes clients from the server's user list if they have not updated for the current iteration.
+
+        This method checks if the clients have failed to send their updated model within a specific time frame
+        and removes them from the list of active clients to maintain an updated and active client pool.
+        """
+        users_to_remove = []
+        for user in self.users:
+            if user.current_iteration != self.current_iteration and time.time() - self.iteration_time > 15:
+                users_to_remove.append(user)
+        for user in users_to_remove:
+            self.users.remove(user)
+    
+    def check_all_received(self) -> bool:
+        """
+        Checks if all clients have sent their local model packets for the current iteration.
 
         Returns:
-            tuple: Tensors representing training and testing images and labels, and sample counts.
+            bool: True if all clients' data has been received for the current iteration, False otherwise.
         """
-        train_path = os.path.join("FLdata", "train", "mnist_train_client" + str(self.id) + ".json")
-        test_path = os.path.join("FLdata", "test", "mnist_test_client" + str(self.id) + ".json")
-        train_data = {}
-        test_data = {}
+        for user in self.users:
+            if user.current_iteration != self.current_iteration:
+                return False
+        return True
 
-        with open(os.path.join(train_path), "r") as f_train:
-            train = json.load(f_train)
-            train_data.update(train['user_data'])
-        with open(os.path.join(test_path), "r") as f_test:
-            test = json.load(f_test)
-            test_data.update(test['user_data'])
-
-        X_train, y_train, X_test, y_test = train_data['0']['x'], train_data['0']['y'], test_data['0']['x'], test_data['0']['y']
-        X_train = torch.Tensor(X_train).view(-1, 1, 28, 28).type(torch.float32)
-        y_train = torch.Tensor(y_train).type(torch.int64)
-        X_test = torch.Tensor(X_test).view(-1, 1, 28, 28).type(torch.float32)
-        y_test = torch.Tensor(y_test).type(torch.int64)
-        train_samples, test_samples = len(y_train), len(y_test)
-        return X_train, y_train, X_test, y_test, train_samples, test_samples
-
-    def set_parameters(self, param1_str: str, param2_str: str, req1_str: str, req2_str: str):
+    def plot_loss(self):
         """
-        Updates the local model with the global model parameters received from the server.
+        Plots the training loss of the global model over the iterations.
 
-        Args:
-            param1_str (str): Serialized parameters for the first layer.
-            param2_str (str): Serialized parameters for the second layer.
-            req1_str (str): String indicating if the first layer requires gradient computation.
-            req2_str (str): String indicating if the second layer requires gradient computation.
+        This method creates a matplotlib figure to visualize the training loss progression
+        throughout the federated learning process.
         """
-        param1, param2 = self.model.parameters()
-        param1.data = torch.tensor(param1_str)
-        if req1_str == "true":
-            param1.requires_grad = True
-        else:
-            param1.requires_grad = False
-            
-        param2.data = torch.tensor(param2_str)
-        if req2_str == "true":
-            param2.requires_grad = True
-        else:
-            param2.requires_grad = False
-            
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
-            
-    def train(self, epochs: int) -> list:
+        plt.figure(1,figsize=(5, 5))
+        plt.plot(self.loss, label="FedAvg", linewidth  = 1)
+        plt.legend(loc='upper right', prop={'size': 12}, ncol=2)
+        plt.ylabel('Training Loss')
+        plt.xlabel('Global rounds')
+        plt.show()
+
+    def plot_accuracy(self):
         """
-        Trains the local model for a specified number of epochs.
+        Plots the testing accuracy of the global model over the iterations.
 
-        Args:
-            epochs (int): The number of epochs to train the model.
-
-        Returns:
-            list: The final loss of the model after training, converted to a list.
+        This method creates a matplotlib figure to visualize the testing accuracy progression
+        throughout the federated learning process.
         """
-        self.model.train()
-        for epoch in range(1, epochs + 1):
-            self.model.train()
-            for batch_idx, (X, y) in enumerate(self.trainloader):
-                self.optimizer.zero_grad()
-                output = self.model(X)
-                loss = self.loss(output, y)
-                loss.backward()
-                self.optimizer.step()
-        return loss.data.tolist()
-    
-    def test(self) -> float:
+        plt.figure(1,figsize=(5, 5))
+        plt.plot(self.accuracy, label="FedAvg", linewidth  = 1)
+        plt.ylim([0.8,  0.99])
+        plt.legend(loc='upper right', prop={'size': 12}, ncol=2)
+        plt.ylabel('Testing Acc')
+        plt.xlabel('Global rounds')
+        plt.show()
+
+    def run(self):
         """
-        Tests the trained model on the test dataset to calculate the accuracy.
+        Starts the server and initiates the federated learning process.
 
-        Returns:
-            float: The accuracy of the model on the test dataset.
+        This method sets up threads for receiving data from clients and for iterating through
+        training rounds, then plots the loss and accuracy after the training is complete.
         """
-        self.model.eval()
-        test_acc = 0
-        for x, y in self.testloader:
-            output = self.model(x)
-            test_acc += (torch.sum(torch.argmax(output, dim=1) == y) / y.shape[0]).item()
-        return test_acc
+        t1 = threading.Thread(target=self.receive)
+        t1.daemon = True
+        t2 = threading.Thread(target=self.iterate)
+        t2.start()
+        t1.start()
+        t2.join()
+        self.plot_loss()
+        self.plot_accuracy()
 
-def main():
-    """
-    The main function that initializes a client instance and starts the training and testing process.
-
-    This function parses command line arguments for client ID, port number, and optimization method.
-    It validates the inputs and starts the handshaking and model receiving processes in separate threads.
-    """
-    if len(sys.argv) != 4:
-        print("Require 4 command line arguments!")
-        return
-    
-    client_id = sys.argv[1]
-    port_no = sys.argv[2]
-    opt_method = sys.argv[3]
-    learning_rate = 0.01
-    
-    try:
-        id = int(client_id[-1])
-    except:
-        print("Wrong client id!")
-        return
-    
-    try:
-        port_no = int(port_no)
-    except:
-        print("Wrong port No!")
-        return
-    
-    if opt_method != "0" and opt_method != "1":
-        print("Wrong optimization method!")
-        return
-    
-    client = Client(client_id, learning_rate, port_no, opt_method)
-    
-    hand_shake_thread = threading.Thread(target=client.hand_shake)
-    model_receiving_thread = threading.Thread(target=client.model_receiving)
-    
-    hand_shake_thread.start()
-    model_receiving_thread.start()
-    
-    
-# The starting point of the script. 
-if __name__ == "__main__":
-    main()
+# This block is the starting point of the script. 
+# It parses command line arguments for the server's port number and sub-client count, 
+# initializes the server, and starts the federated learning process.
+if __name__ == '__main__':
+    port_no = int(sys.argv[1])
+    sub_client = int(sys.argv[2])
+    server = Server(port_no, sub_client)
+    server.run()
