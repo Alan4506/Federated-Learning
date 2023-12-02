@@ -292,23 +292,13 @@ class Server:
                 acc = lines[2]
                 loss = lines[3]
                 param1_str = lines[4]
-                req1_str  = lines[5]
-                param2_str  = lines[6]
-                req2_str  = lines[7]
+                param2_str  = lines[5]
                 for user in self.users:
                     if id == user.id:
                         user.current_iteration = self.current_iteration
                         param1, param2 = user.model.parameters()
                         param1.data = torch.tensor(json.loads(param1_str))
-                        if (req1_str == "true"):
-                            param1.requires_grad = True
-                        else:
-                            param1.requires_grad = False
                         param2.data = torch.tensor(json.loads(param2_str))
-                        if (req2_str == "true"):
-                            param2.requires_grad = True
-                        else:
-                            param2.requires_grad = False
                         user.accuracy = float(acc)
                         user.loss = float(loss)
 
@@ -325,15 +315,7 @@ class Server:
         param1, param2 = self.global_model.parameters()
         message = "broadcast packet\n"
         message += str(param1.data.tolist()) + "\n"
-        if param1.requires_grad:
-            message += "true" + "\n"
-        else:
-            message += "false" + "\n"
         message += str(param2.data.tolist()) + "\n"
-        if param2.requires_grad:
-            message += "true" + "\n"
-        else:
-            message += "false" + "\n"
 
         for user in self.users:
             try:
