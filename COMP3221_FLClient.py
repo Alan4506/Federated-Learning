@@ -124,10 +124,8 @@ class Client:
             received_ls = received.strip().split("\n")
             if received_ls[0] == "broadcast packet":
                 param1 = json.loads(received_ls[1])
-                req1 = received_ls[2]
-                param2 = json.loads(received_ls[3])
-                req2 = received_ls[4]
-                self.set_parameters(param1, param2, req1, req2)
+                param2 = json.loads(received_ls[2])
+                self.set_parameters(param1, param2)
                 
                 accuracy = self.test()
                 loss = self.train(2)
@@ -169,15 +167,7 @@ class Client:
         param1, param2 = self.model.parameters()
         message = f"local model packet\n{self.client_id}\n{str(accuracy)}\n{str(loss)}\n"
         message += str(param1.data.tolist()) + "\n"
-        if param1.requires_grad:
-            message += "true" + "\n"
-        else:
-            message += "false" + "\n"
         message += str(param2.data.tolist()) + "\n"
-        if param2.requires_grad:
-            message += "true" + "\n"
-        else:
-            message += "false" + "\n"
             
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -218,28 +208,17 @@ class Client:
         train_samples, test_samples = len(y_train), len(y_test)
         return X_train, y_train, X_test, y_test, train_samples, test_samples
 
-    def set_parameters(self, param1_str: str, param2_str: str, req1_str: str, req2_str: str):
+    def set_parameters(self, param1_str: str, param2_str: str):
         """
         Updates the local model with the global model parameters received from the server.
 
         Args:
             param1_str (str): Serialized parameters for the first layer.
             param2_str (str): Serialized parameters for the second layer.
-            req1_str (str): String indicating if the first layer requires gradient computation.
-            req2_str (str): String indicating if the second layer requires gradient computation.
         """
         param1, param2 = self.model.parameters()
         param1.data = torch.tensor(param1_str)
-        if req1_str == "true":
-            param1.requires_grad = True
-        else:
-            param1.requires_grad = False
-            
         param2.data = torch.tensor(param2_str)
-        if req2_str == "true":
-            param2.requires_grad = True
-        else:
-            param2.requires_grad = False
             
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
             
