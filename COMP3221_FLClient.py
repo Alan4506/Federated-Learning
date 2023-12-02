@@ -151,9 +151,9 @@ class Client:
         """
         with open(self.client_id + "_log.txt", "a") as log:
             message = f"I am {self.client_id[:-1]} {self.client_id[-1]}\n"
-            message += f"Receving new global model\nTraining loss: {str(loss)}\n"
-            message += f"Testing acurancy: {str(accuracy * 100)}%\n"
-            message += "Local training...\nSending new local model\n"
+            message += f"Receiving new global model\nTraining loss: {loss:.4f}\n" 
+            message += f"Testing accuracy: {accuracy * 100:.4f}%\n"
+            message += "Local training...\nSending new local model\n\n"
             
             log.write(message)
             print(message)
