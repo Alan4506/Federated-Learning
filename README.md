@@ -137,7 +137,7 @@ Close the windows showing the figures and the whole program will end.
 
 - GD vs. Mini-Batch GD
 
-Gradient Descent (GD) updates parameters after processing the entire dataset, which provides a smooth convergence as indicated by the loss curves, but might not be efficient with large datasets. Conversely, Mini-Batch GD, while showing a more volatile loss curve due to more frequent updates, leads to a faster convergence. This volatility is a trade-off for the computational efficiency and can help escape local minima, potentially leading to better generalization, as suggested by the lower training loss. The smoother accuracy curve for Mini-Batch GD indicates a steadier improvement in model performance over iterations compared to GD.
+Gradient Descent (GD) updates parameters after processing the entire dataset, which provides a smooth convergence as indicated by the loss curves, but might not be efficient with large datasets. Conversely, Mini-Batch GD, while showing a more volatile loss curve due to more frequent updates, leads to a faster convergence. This volatility is a trade-off for the computational efficiency and can help escape local minima, potentially leading to better generalization, as suggested by the lower training loss. Despite the fluctuations, Mini-Batch GD achieves a higher final accuracy and tends to improve the model's performance faster over iterations compared to GD.
 
 - Subsampling vs. Non-Subsampling Clients
 
