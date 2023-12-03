@@ -13,7 +13,7 @@ import socket
 
 class MCLR(nn.Module):
     """
-    The model used for the MNIST task: a simple multiclass logistic regression
+    The model used for the MNIST task: a simple multinominal logistic regression model
     """
 
     def __init__(self):
