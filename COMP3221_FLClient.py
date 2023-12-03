@@ -291,12 +291,8 @@ def main():
     
     client = Client(client_id, learning_rate, port_no, opt_method)
     
-    hand_shake_thread = threading.Thread(target=client.hand_shake)
-    model_receiving_thread = threading.Thread(target=client.model_receiving)
-    
-    hand_shake_thread.start()
-    model_receiving_thread.start()
-    
+    client.hand_shake()
+    client.model_receiving()
     
 # The starting point of the script. 
 if __name__ == "__main__":
