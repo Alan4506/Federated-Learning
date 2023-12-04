@@ -245,10 +245,9 @@ class Server:
                     conn = threading.Thread(target=self.data_receiving, args=(c,))
                     conn.start()
 
-                server.close()
-
-        except:
-            print("server error")
+        except Exception as e:
+            print("Server receive error.")
+            print(e)
 
     def data_receiving(self, client: socket.socket):
         """
@@ -296,8 +295,6 @@ class Server:
                         user.accuracy = float(acc)
                         user.loss = float(loss)
 
-        client.close()
-
     def broadcast(self):
         """
         Broadcasts the current global model's parameters to all connected clients.
@@ -317,10 +314,9 @@ class Server:
                     s.connect((self.host_no, user.port_no)) 
                     message_encrypt = bytes(message, encoding= 'utf-8')
                     s.sendall(message_encrypt)
-                    s.close()   
-            except:
-                print("Broadcast the global model to " + user.id + " failed. This client may have failed")
-                pass
+            except Exception as e:
+                print("Broadcast the global model to " + user.id + " failed. This client may have failed.")
+                print(e)
     
     def stop_clients(self):
         """
@@ -336,10 +332,9 @@ class Server:
                     message = "stop packet"
                     message_encrypt = bytes(message, encoding= 'utf-8')
                     s.sendall(message_encrypt)
-                    s.close()   
-            except:
-                print("stop clients error")
-                pass
+            except Exception as e:
+                print("Stop clients error.")
+                print(e)
 
     def drop_dead_clients(self):
         """
