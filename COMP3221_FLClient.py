@@ -135,8 +135,8 @@ class Client:
                     param2 = json.loads(received_ls[2])
                     self.set_parameters(param1, param2)
                     
-                    loss = self.train(2)
                     accuracy = self.test()
+                    loss = self.train(2)
                     
                     sending_thread = threading.Thread(target=self.send_local_model, args=(accuracy, loss))
                     sending_thread.start()
