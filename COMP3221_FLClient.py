@@ -16,7 +16,6 @@ class Client:
 
     Attributes:
         client_id (str): A unique identifier for the client.
-        id (int): Extracted numeric ID from the client_id.
         server_port (int): The port number of the server for communication.
         port (int): The local port for client communication.
         host (str): Hostname or IP address of the server.
@@ -40,13 +39,12 @@ class Client:
             opt (str): Option to determine the optimization method; '0' for GD, '1' for mini-batch size GD.
         """
         self.client_id = client_id
-        self.id = int(client_id[-1])
         self.server_port = 6000
         self.port = port
         self.host = "127.0.0.1"
         self.learning_rate = learning_rate
         
-        self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = self.get_data()
+        self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = self.load_data()
         self.train_data = [(x, y) for x, y in zip(self.X_train, self.y_train)]
         self.test_data = [(x, y) for x, y in zip(self.X_test, self.y_test)]
         
@@ -66,20 +64,30 @@ class Client:
             os.remove(log_path)
     
     
-    def hand_shake(self):
+    def register(self) -> bool:
         """
-        Initiates a handshake with the server to establish a connection and sends client details.
+        First communicate with the server to establish a connection and sends client details.
 
-        This method sends a hand-shaking packet containing the client's ID, port number,
+        This method sends a client register packet containing the client's ID, port number,
         and number of training samples to the server.
+
+        Returns:
+            bool: True if registration is successful, False otherwise.
         """
-        connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        connection.connect((self.host, self.server_port))
-        
-        hand_shake_mess = f"hand-shaking packet\n{self.client_id}\n{self.port}\n{self.train_samples}"
-        mess_data = bytes(hand_shake_mess, encoding='utf-8')
-        connection.sendall(mess_data)
-        connection.close()
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
+                connection.connect((self.host, self.server_port))
+
+                register_mess = f"client register packet\n{self.client_id}\n{self.port}\n{self.train_samples}"
+                mess_data = bytes(register_mess, encoding='utf-8')
+                connection.sendall(mess_data)
+
+            return True  # Registration successful
+
+        except Exception as e:
+            print("Error during client registration:")
+            print(e)
+            return False  # Registration failed
         
     def model_receiving(self):
         """
@@ -103,7 +111,6 @@ class Client:
             print("Error during socket connection!")
             print(e)
             
-            
     def distributed_computation(self, conn: socket.socket):
         """
         Handles the distributed computation process after receiving the global model from the server.
@@ -111,33 +118,41 @@ class Client:
         Args:
             conn (socket.socket): The socket connection through which data is received.
         """
-        while True:
-            received = ""
+        try:
             while True:
-                data = conn.recv(1024 * 16)
-                if not data:
+                received = ""
+                while True:
+                    data = conn.recv(1024 * 16)
+                    if not data:
+                        break
+                    received += data.decode('utf-8')
+                if received == "":
                     break
-                received += str(data.decode('utf-8'))
-            # received = str(data.decode('utf-8'))
-            if (received == ""):
-                break
-            received_ls = received.strip().split("\n")
-            if received_ls[0] == "broadcast packet":
-                param1 = json.loads(received_ls[1])
-                param2 = json.loads(received_ls[2])
-                self.set_parameters(param1, param2)
+                received_ls = received.strip().split("\n")
+
+                if received_ls[0] == "broadcast packet":
+                    param1 = json.loads(received_ls[1])
+                    param2 = json.loads(received_ls[2])
+                    self.set_parameters(param1, param2)
+                    
+                    loss = self.train(2)
+                    accuracy = self.test()
+                    
+                    sending_thread = threading.Thread(target=self.send_local_model, args=(accuracy, loss))
+                    sending_thread.start()
+                    
+                    self.log_accuracy_and_loss(accuracy, loss)
                 
-                accuracy = self.test()
-                loss = self.train(2)
-                
-                sending_thread = threading.Thread(target=self.send_local_model, args=(accuracy, loss))
-                sending_thread.start()
-                
-                self.log_accuracy_and_loss(accuracy, loss)
-            
-            elif received_ls[0] == "stop packet":
-                os._exit(0)
-        conn.close()
+                elif received_ls[0] == "stop packet":
+                    print("All training finished.\n")
+                    os._exit(0)
+        
+        except Exception as e:
+            print(f"Error in distributed computation: {e}")
+
+        finally:
+            conn.close()
+
                 
     def log_accuracy_and_loss(self, accuracy: float, loss: float):
         """
@@ -174,34 +189,32 @@ class Client:
                 s.connect((self.host, self.server_port)) 
                 mess = bytes(message, encoding= 'utf-8')
                 s.sendall(mess)
+                
         except Exception as e:
             print("Error during local model sending!")
             print(e)
                 
                        
-    def get_data(self) -> tuple:
+    def load_data(self) -> tuple:
         """
         Retrieves and parses the client's training and testing datasets from JSON files into Tensor objects.
 
         Returns:
             tuple: Tensors representing training and testing images and labels, and sample counts.
         """
-        train_path = os.path.join("FLdata", "train", "mnist_train_client" + str(self.id) + ".json")
-        test_path = os.path.join("FLdata", "test", "mnist_test_client" + str(self.id) + ".json")
-        train_data = {}
-        test_data = {}
+        train_path = os.path.join("FLdata", "train", "mnist_train_client" + self.client_id[-1] + ".json")
+        test_path = os.path.join("FLdata", "test", "mnist_test_client" + self.client_id[-1] + ".json")
+        
+        with open(train_path, "r") as f_train:
+            train_data = json.load(f_train)['user_data']
 
-        with open(os.path.join(train_path), "r") as f_train:
-            train = json.load(f_train)
-            train_data.update(train['user_data'])
-        with open(os.path.join(test_path), "r") as f_test:
-            test = json.load(f_test)
-            test_data.update(test['user_data'])
+        with open(test_path, "r") as f_test:
+            test_data = json.load(f_test)['user_data']
 
         X_train, y_train, X_test, y_test = train_data['0']['x'], train_data['0']['y'], test_data['0']['x'], test_data['0']['y']
-        X_train = torch.Tensor(X_train).view(-1, 1, 28, 28).type(torch.float32)
+        X_train = torch.Tensor(X_train).reshape(-1, 1, 28, 28).type(torch.float32)
         y_train = torch.Tensor(y_train).type(torch.int64)
-        X_test = torch.Tensor(X_test).view(-1, 1, 28, 28).type(torch.float32)
+        X_test = torch.Tensor(X_test).reshape(-1, 1, 28, 28).type(torch.float32)
         y_test = torch.Tensor(y_test).type(torch.int64)
         train_samples, test_samples = len(y_train), len(y_test)
         return X_train, y_train, X_test, y_test, train_samples, test_samples
@@ -260,7 +273,7 @@ def main():
     The main function that initializes a client instance and starts the training and testing process.
 
     This function parses command line arguments for client ID, port number, and optimization method.
-    It validates the inputs and starts the handshaking and model receiving processes in separate threads.
+    It validates the inputs and starts the register and model receiving processes in separate threads.
     """
     if len(sys.argv) != 4:
         print("Require 4 command line arguments!")
@@ -271,26 +284,29 @@ def main():
     opt_method = sys.argv[3]
     learning_rate = 0.01
     
-    try:
-        id = int(client_id[-1])
-    except:
-        print("Wrong client id!")
+    if not client_id or not client_id[-1].isdigit():
+        print("Invalid client id! The last character must be a number.")
         return
     
     try:
         port_no = int(port_no)
-    except:
-        print("Wrong port No!")
+        if port_no <= 0:
+            raise ValueError("Port number must be positive.")
+    except ValueError as e:
+        print(f"Invalid port number: {e}")
         return
     
-    if opt_method != "0" and opt_method != "1":
-        print("Wrong optimization method!")
+    if opt_method not in ["0", "1"]:
+        print("Invalid optimization method!")
         return
     
     client = Client(client_id, learning_rate, port_no, opt_method)
     
-    client.hand_shake()
-    client.model_receiving()
+    if client.register():  # Check if registration is successful
+        client.model_receiving()
+    else:
+        print("Registration failed. Exiting program.")
+        return  # Exit if registration fails
     
     
 # The starting point of the script. 
