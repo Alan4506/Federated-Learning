@@ -45,8 +45,9 @@ class Client:
         self.learning_rate = learning_rate
         
         self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = self.load_data()
-        self.train_data = [(x, y) for x, y in zip(self.X_train, self.y_train)]
-        self.test_data = [(x, y) for x, y in zip(self.X_test, self.y_test)]
+
+        self.train_data = list(zip(self.X_train, self.y_train))
+        self.test_data = list(zip(self.X_test, self.y_test))
         
         if opt == "0":
             self.trainloader = DataLoader(self.train_data, self.train_samples)
@@ -233,7 +234,7 @@ class Client:
             
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
             
-    def train(self, epochs: int) -> list:
+    def train(self, epochs: int) -> float:
         """
         Trains the local model for a specified number of epochs.
 
@@ -241,18 +242,18 @@ class Client:
             epochs (int): The number of epochs to train the model.
 
         Returns:
-            list: The final loss of the model after training, converted to a list.
+            float: The final loss value of the model after training.
         """
         self.model.train()
         for epoch in range(1, epochs + 1):
-            self.model.train()
-            for batch_idx, (X, y) in enumerate(self.trainloader):
+            for X, y in self.trainloader:
                 self.optimizer.zero_grad()
                 output = self.model(X)
                 loss = self.loss(output, y)
                 loss.backward()
                 self.optimizer.step()
-        return loss.data.tolist()
+                
+        return loss.item()
     
     def test(self) -> float:
         """
@@ -263,9 +264,10 @@ class Client:
         """
         self.model.eval()
         test_acc = 0
-        for x, y in self.testloader:
-            output = self.model(x)
+        for X, y in self.testloader:
+            output = self.model(X)
             test_acc += (torch.sum(torch.argmax(output, dim=1) == y) / y.shape[0]).item()
+
         return test_acc
 
 def main():
