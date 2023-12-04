@@ -158,8 +158,8 @@ class Server:
             self.accuracy.append(avg_accuracy)
             self.loss.append(avg_loss)
 
-            print("Average accuracy of all clients: {:.4f}".format(avg_accuracy))
-            print("Average loss of all clients: {:.4f}".format(avg_loss))
+            print("Average test accuracy of all clients: {:.4f}".format(avg_accuracy))
+            print("Average training loss of all clients: {:.4f}".format(avg_loss))
             
             # Aggregate all clients model to obtain new global model 
             self.aggregate_parameters()
@@ -271,7 +271,7 @@ class Server:
                 break
 
             lines = received.split("\n")
-            if (lines[0] == "hand-shaking packet"):
+            if (lines[0] == "client register packet"):
                 if (self.check_user_existence(lines[1]) == False):
                     user = User(int(lines[3]), int(lines[2]), lines[1])
                     if (time.time() - self.init_time <= 30):
@@ -407,11 +407,35 @@ class Server:
         self.plot_loss()
         self.plot_accuracy()
 
-# This block is the starting point of the script. 
-# It parses command line arguments for the server's port number and sub-client count, 
-# initializes the server, and starts the federated learning process.
-if __name__ == '__main__':
-    port_no = int(sys.argv[1])
-    sub_client = int(sys.argv[2])
+def main():
+    """
+    The main function that initializes a server instance and starts the federated learning process.
+
+    This function parses command line arguments for port number, and flag indicating whether clients subsampling is used or not.
+    It validates the inputs and starts the training and test process.
+    """
+    if len(sys.argv) != 3:
+        print("Require 3 command line arguments!")
+        return
+    
+    port_no = sys.argv[1]
+    sub_client = sys.argv[2]
+    
+    try:
+        port_no = int(port_no)
+        if port_no <= 0:
+            raise ValueError("Port number must be positive.")
+    except ValueError as e:
+        print(f"Invalid port number: {e}")
+        return
+    
+    if sub_client not in ["0", "1"]:
+        print("Invalid sub-client flag!")
+        return
+    
     server = Server(port_no, sub_client)
     server.run()
+
+# The starting point of the script. 
+if __name__ == '__main__':
+    main()
