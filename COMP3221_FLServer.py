@@ -13,7 +13,7 @@ import socket
 
 class MCLR(nn.Module):
     """
-    The model used for the MNIST task: a simple multinominal logistic regression model
+    The model used for the MNIST task: a simple multinomial logistic regression
     """
 
     def __init__(self):
@@ -187,14 +187,16 @@ class Server:
         if (len(self.users) == 0):
             return
         
+        # no clients subsampling
         if (self.sub_client == 0):
             total_samples = 0
             for user in self.users:
                 total_samples += user.train_samples
             for user in self.users:
                 for server_param, user_param in zip(self.global_model.parameters(), user.model.parameters()):
-                    server_param.data = server_param.data + user_param.data.clone() * user.train_samples / total_samples
+                    server_param.data = server_param.data + user_param.data * user.train_samples / total_samples
 
+        # clients subsampling
         else:
             if (len(self.users) == 1):
                 self.random_users = [self.users[0]]
@@ -208,8 +210,8 @@ class Server:
                 total_samples += user.train_samples
             for user in self.random_users:
                 for server_param, user_param in zip(self.global_model.parameters(), user.model.parameters()):
-                    server_param.data = server_param.data + user_param.data * user.train_samples / total_samples
-                    
+                    server_param.data = server_param.data + user_param.data.clone() * user.train_samples / total_samples
+
     def evaluate(self) -> tuple:
         """
         Calculates and returns the average testing accuracy and average training loss of all users.
@@ -372,7 +374,7 @@ class Server:
         This method creates a matplotlib figure to visualize the training loss progression
         throughout the federated learning process.
         """
-        plt.figure(1,figsize=(5, 5))
+        plt.figure(1, figsize=(5, 5))
         plt.plot(self.loss, label="FedAvg", linewidth  = 1)
         plt.legend(loc='upper right', prop={'size': 12}, ncol=2)
         plt.ylabel('Training Loss')
@@ -386,7 +388,7 @@ class Server:
         This method creates a matplotlib figure to visualize the testing accuracy progression
         throughout the federated learning process.
         """
-        plt.figure(1,figsize=(5, 5))
+        plt.figure(1, figsize=(5, 5))
         plt.plot(self.accuracy, label="FedAvg", linewidth  = 1)
         plt.ylim([0.8,  0.99])
         plt.legend(loc='upper right', prop={'size': 12}, ncol=2)
