@@ -156,9 +156,6 @@ class Server:
             # Evaluate the global model across all clients
             avg_accuracy, avg_loss = self.evaluate()
             self.accuracy.append(avg_accuracy)
-            
-            # Each client keeps training process to obtain new local model from the global model 
-            # Above process training all clients and all client paricipate to server, how can we just select subset of user for aggregation
             self.loss.append(avg_loss)
 
             print("Average accuracy of all clients: {:.4f}".format(avg_accuracy))
