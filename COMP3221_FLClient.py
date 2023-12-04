@@ -99,9 +99,9 @@ class Client:
                     computation_thread.setDaemon(True)
                     computation_thread.start()
         
-        except socket.error as msg:
+        except Exception as e:
             print("Error during socket connection!")
-            print(msg)
+            print(e)
             
             
     def distributed_computation(self, conn: socket.socket):
@@ -174,11 +174,9 @@ class Client:
                 s.connect((self.host, self.server_port)) 
                 mess = bytes(message, encoding= 'utf-8')
                 s.sendall(mess)
-                s.close()   
-                
-        except socket.error as msg:
+        except Exception as e:
             print("Error during local model sending!")
-            print(msg)
+            print(e)
                 
                        
     def get_data(self) -> tuple:
@@ -293,6 +291,7 @@ def main():
     
     client.hand_shake()
     client.model_receiving()
+    
     
 # The starting point of the script. 
 if __name__ == "__main__":
