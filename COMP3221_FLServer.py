@@ -208,7 +208,7 @@ class Server:
                 total_samples += user.train_samples
             for user in self.random_users:
                 for server_param, user_param in zip(self.global_model.parameters(), user.model.parameters()):
-                    server_param.data = server_param.data + user_param.data.clone() * user.train_samples / total_samples
+                    server_param.data = server_param.data + user_param.data * user.train_samples / total_samples
                     
     def evaluate(self) -> tuple:
         """
