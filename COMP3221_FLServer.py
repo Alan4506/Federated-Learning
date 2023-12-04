@@ -173,15 +173,12 @@ class Server:
 
         self.stop_clients()
 
-    def aggregate_parameters(self) -> MCLR:
+    def aggregate_parameters(self):
         """
         Aggregates parameters from the client models to update the global model.
 
         If `sub_client` is 0, aggregates from all users, otherwise selects a random subset of users.
         Updates the global model's parameters by averaging the client models weighted by their number of samples.
-
-        Returns:
-            MCLR: The updated global model after aggregation.
         """
         # Clear global model first
         for param in self.global_model.parameters():
@@ -197,7 +194,6 @@ class Server:
             for user in self.users:
                 for server_param, user_param in zip(self.global_model.parameters(), user.model.parameters()):
                     server_param.data = server_param.data + user_param.data.clone() * user.train_samples / total_samples
-            return self.global_model
 
         else:
             if (len(self.users) == 1):
@@ -213,8 +209,7 @@ class Server:
             for user in self.random_users:
                 for server_param, user_param in zip(self.global_model.parameters(), user.model.parameters()):
                     server_param.data = server_param.data + user_param.data.clone() * user.train_samples / total_samples
-            return self.global_model
-
+                    
     def evaluate(self) -> tuple:
         """
         Calculates and returns the average testing accuracy and average training loss of all users.
