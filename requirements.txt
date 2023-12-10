@@ -1,0 +1,7 @@
+# Requirements for Python Scripts
+
+# PyTorch with specific CUDA version
+torch==1.9.0
+
+# Matplotlib
+matplotlib==3.5.1
