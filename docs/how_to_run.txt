@@ -1,4 +1,4 @@
-To run the program, go to the scr directory, and open 6 terminals.
+To run the program, go to the src directory, and open 6 terminals.
 The server must get started first. In the first terminal, run "python COMP3221_FLServer.py 6000 0" to disable clients subsampling or run "python COMP3221_FLServer.py 6000 1" to enable clients subsampling.
 Then within 30 seconds, run 5 commands in the last 5 terminals.
 In the second terminal, run "python COMP3221_FLClient.py client1 6001 0" to use GD as the client's optimization method or run "python COMP3221_FLClient.py client1 6001 1" to use Mini-Batch GD as the client's optimization method.
